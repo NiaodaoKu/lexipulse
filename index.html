@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LexiPulse — 讓單字真正留在腦中</title>
+  <meta name="description" content="LexiPulse 是基於遞減背誦法的英文單字學習 App，科學間隔複習，讓記憶更持久。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c14;
+      --surface: #0f1623;
+      --surface2: #141d2e;
+      --border: rgba(255,255,255,0.07);
+      --text: #f0f4ff;
+      --muted: #6b7a99;
+      --accent: #4f6ef7;
+      --accent2: #7c3aed;
+      --glow: rgba(79,110,247,0.35);
+      --cyan: #06d6c5;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 900;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,12,20,0.7);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 10px 22px;
+      border-radius: 100px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 24px var(--glow);
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 36px var(--glow);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Glow orbs */
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(79,110,247,0.12) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(79,110,247,0.1);
+      border: 1px solid rgba(79,110,247,0.3);
+      border-radius: 100px;
+      padding: 6px 16px 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #93a8f4;
+      margin-bottom: 32px;
+      letter-spacing: 0.04em;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.2rem, 8vw, 4.8rem);
+      line-height: 1.0;
+      letter-spacing: -0.04em;
+      margin-bottom: 28px;
+      animation: fadeUp 0.8s ease 0.1s both;
+    }
+
+    .hero-title span {
+      display: block;
+      background: linear-gradient(135deg, #fff 30%, #6b89f5 70%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-title .line2 {
+      background: linear-gradient(135deg, #a5b4fc 0%, #fff 60%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      font-weight: 300;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.7;
+      margin-bottom: 48px;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .hero-desc strong {
+      color: #a5b4fc;
+      font-weight: 500;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.8s ease 0.3s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 1rem;
+      padding: 16px 36px;
+      border-radius: 100px;
+      text-decoration: none;
+      transition: all 0.25s;
+      box-shadow: 0 0 40px var(--glow), inset 0 1px 0 rgba(255,255,255,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      border-radius: inherit;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 60px var(--glow);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 1rem;
+      padding: 16px 28px;
+      border-radius: 100px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: all 0.25s;
+    }
+
+    .btn-secondary:hover {
+      color: var(--text);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ── SCROLL INDICATOR ── */
+    .scroll-hint {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      animation: fadeUp 1s ease 0.8s both;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--muted), transparent);
+      animation: scrollDown 1.5s ease-in-out infinite;
+    }
+
+    @keyframes scrollDown {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform: scaleY(1); transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    /* ── SECTION ── */
+    section {
+      padding: 100px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      font-weight: 300;
+      color: var(--muted);
+      max-width: 520px;
+      line-height: 1.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      margin-top: 64px;
+    }
+
+    .how-card {
+      background: var(--surface);
+      padding: 40px 32px;
+      transition: background 0.3s;
+    }
+
+    .how-card:hover { background: var(--surface2); }
+
+    .how-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 3rem;
+      color: rgba(79,110,247,0.2);
+      line-height: 1;
+      margin-bottom: 20px;
+      letter-spacing: -0.05em;
+    }
+
+    .how-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .how-card p {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── SRS TIMELINE ── */
+    .timeline-section {
+      padding: 100px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .timeline-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Timeline: absolute positioning scaled to container width */
+    .timeline-track {
+      margin-top: 64px;
+      position: relative;
+      /* 手機縮放：整個 track 等比縮小 */
+      transform-origin: left center;
+    }
+
+    .timeline-ruler {
+      position: relative;
+      width: 100%;
+      /* 高度 = t-count(22) + gap(10) + dot(12) + gap(10) + day(18) + gap(8) + label(16) = ~96px */
+      height: 100px;
+    }
+
+    /* 數線本體 */
+    .timeline-ruler::before {
+      content: '';
+      position: absolute;
+      top: 50px; /* dot 的垂直位置 */
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, var(--accent), rgba(79,110,247,0.15));
+    }
+
+    .timeline-node {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transform: translateX(-50%);
+      /* top 值依 position 由 JS 設定 */
+    }
+
+    .t-count {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: rgba(79,110,247,0.1);
+      border: 1px solid rgba(79,110,247,0.2);
+      border-radius: 100px;
+      padding: 2px 8px;
+      white-space: nowrap;
+      position: absolute;
+      top: 0;
+    }
+
+    .t-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid var(--accent);
+      position: absolute;
+      top: 44px;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .t-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--glow);
+    }
+
+    .t-day {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: var(--text);
+      white-space: nowrap;
+      position: absolute;
+      top: 62px;
+    }
+
+    .t-label {
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-align: center;
+      white-space: nowrap;
+      position: absolute;
+      top: 80px;
+    }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 64px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(79,110,247,0.4), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover { border-color: rgba(79,110,247,0.25); transform: translateY(-2px); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(79,110,247,0.1);
+      border: 1px solid rgba(79,110,247,0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 56px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(79,110,247,0.08) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      pointer-events: none;
+    }
+
+    .cta-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .cta-inner h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 24px;
+    }
+
+    .cta-inner p {
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--muted);
+      margin-bottom: 48px;
+      line-height: 1.7;
+    }
+
+    .cta-note {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .cta-note span {
+      display: inline-block;
+      margin: 0 10px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 300;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 100px 20px 80px; }
+      .how-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      /* timeline scales via JS */
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <div class="logo-dot"></div>
+      LexiPulse
+    </a>
+    <a href="YOUR_GAS_APP_URL_HERE" class="nav-cta" target="_blank">
+      開始使用 →
+    </a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">
+      <div class="badge-dot"></div>
+      基於艾賓浩斯遺忘曲線 · Spaced Repetition
+    </div>
+    <h1 class="hero-title">
+      <span>讓單字</span>
+      <span class="line2">真正留下來</span>
+    </h1>
+    <p class="hero-desc">
+      LexiPulse 運用<strong>遞減背誦法</strong>，在你快忘記之前出現，
+      以最少的時間達到最持久的記憶。
+    </p>
+    <div class="hero-buttons">
+      <a href="YOUR_GAS_APP_URL_HERE" class="btn-primary" target="_blank">
+        立即開始學習
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+      <a href="#how" class="btn-secondary">
+        了解原理
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12l7 7 7-7"/>
+        </svg>
+      </a>
+    </div>
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      scroll
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="reveal">
+      <div class="section-label">How it works</div>
+      <h2 class="section-title">三步驟，開始記憶</h2>
+      <p class="section-desc">不需要任何設定，登入即用，系統自動安排每天的複習計劃。</p>
+    </div>
+    <div class="how-grid reveal" style="transition-delay:0.1s">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <h3>輸入單字</h3>
+        <p>貼上英文和中文，一行一組。支援批量輸入，幾秒就能建立一個卡組。</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <h3>每天複習</h3>
+        <p>首頁顯示今天該複習哪些組，翻卡確認後系統自動記錄進度。</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <h3>間隔拉長</h3>
+        <p>記熟後自動延長複習間隔。只在你快忘記的時候出現，效率最大化。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SRS TIMELINE -->
+  <div class="timeline-section">
+    <div class="timeline-inner">
+      <div class="reveal">
+        <div class="section-label">SRS Algorithm</div>
+        <h2 class="section-title">科學安排的複習間隔</h2>
+        <p class="section-desc">新單字加入後，複習頻率從密集到稀疏，跟著記憶曲線走。</p>
+      </div>
+      <div class="timeline-track reveal" id="timeline-track" style="transition-delay:0.15s">
+        <div class="timeline-ruler" id="timeline-ruler">
+          <div class="timeline-node" data-day="0">
+            <div class="t-count">5次</div>
+            <div class="t-dot active"></div>
+            <div class="t-day">Day 0</div>
+            <div class="t-label">新增當天</div>
+          </div>
+          <div class="timeline-node" data-day="1">
+            <div class="t-count">4次</div>
+            <div class="t-dot active"></div>
+            <div class="t-day">Day 1</div>
+          </div>
+          <div class="timeline-node" data-day="2">
+            <div class="t-count">3次</div>
+            <div class="t-dot active"></div>
+            <div class="t-day">Day 2</div>
+          </div>
+          <div class="timeline-node" data-day="3">
+            <div class="t-count">2次</div>
+            <div class="t-dot active"></div>
+            <div class="t-day">Day 3</div>
+          </div>
+          <div class="timeline-node" data-day="4">
+            <div class="t-count">1次</div>
+            <div class="t-dot active"></div>
+            <div class="t-day">Day 4</div>
+          </div>
+          <div class="timeline-node" data-day="6">
+            <div class="t-count">1次</div>
+            <div class="t-dot"></div>
+            <div class="t-day">Day 6</div>
+            <div class="t-label">間隔拉長</div>
+          </div>
+          <div class="timeline-node" data-day="9">
+            <div class="t-count">1次</div>
+            <div class="t-dot"></div>
+            <div class="t-day">Day 9</div>
+          </div>
+          <div class="timeline-node" data-day="12">
+            <div class="t-count">1次</div>
+            <div class="t-dot"></div>
+            <div class="t-day">Day 12</div>
+          </div>
+          <div class="timeline-node" data-day="17">
+            <div class="t-count">1次</div>
+            <div class="t-dot"></div>
+            <div class="t-day">Day 17</div>
+            <div class="t-label">長期記憶</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="reveal">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">為認真學習者設計</h2>
+      <p class="section-desc">不只是背單字，而是讓你真正能開口說出來。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal" style="transition-delay:0.05s">
+        <div class="feature-icon">🧠</div>
+        <h3>遞減背誦法</h3>
+        <p>第一天背 5 次，之後每天少一次，間隔越來越長。跟著遺忘曲線，效率最高。</p>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:0.1s">
+        <div class="feature-icon">🃏</div>
+        <h3>多種測驗模式</h3>
+        <p>英選中、中選英、聽力測驗、配對題，四種模式強化不同面向的記憶。</p>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:0.15s">
+        <div class="feature-icon">📕</div>
+        <h3>錯題強化庫</h3>
+        <p>答錯的單字自動記錄，專門針對弱點反覆練習，連續答對三次後才從列表移除。</p>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:0.2s">
+        <div class="feature-icon">💬</div>
+        <h3>句子學習</h3>
+        <p>不只背單字，也能儲存實用例句。英文一行，中文一行，同樣走 SRS 流程複習。</p>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:0.25s">
+        <div class="feature-icon">⭐</div>
+        <h3>星號單字</h3>
+        <p>特別重要的單字加入星號，獨立練習，跨裝置同步，隨時專注弱點。</p>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:0.3s">
+        <div class="feature-icon">📱</div>
+        <h3>可加入主畫面</h3>
+        <p>iOS / Android 皆可加入主畫面，像原生 App 一樣使用，離線也能瀏覽快取內容。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner reveal">
+      <a href="YOUR_GAS_APP_URL_HERE" class="btn-primary" target="_blank" style="font-size:1.1rem;padding:18px 48px;">
+        馬上開始使用
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>LexiPulse &nbsp;·&nbsp; Powered by Google Apps Script</p>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Timeline: 按比例定位節點 + 手機縮放
+    function layoutTimeline() {
+      const ruler = document.getElementById('timeline-ruler');
+      if (!ruler) return;
+      const maxDay = 17;
+      const nodes = ruler.querySelectorAll('.timeline-node');
+      const W = ruler.clientWidth;
+      nodes.forEach(node => {
+        const day = parseInt(node.dataset.day);
+        const pct = day / maxDay;
+        node.style.left = (pct * 100) + '%';
+      });
+    }
+
+    // 手機縮放整個 track 使其不超出容器
+    function scaleTimeline() {
+      const track = document.getElementById('timeline-track');
+      const ruler = document.getElementById('timeline-ruler');
+      if (!track || !ruler) return;
+      const containerW = track.parentElement.clientWidth;
+      const minW = 520; // 最小需要的寬度（px）
+      if (containerW < minW) {
+        const scale = containerW / minW;
+        track.style.transform = `scaleX(${scale})`;
+        track.style.transformOrigin = 'left center';
+        // 高度補償
+        ruler.style.marginBottom = '0';
+      } else {
+        track.style.transform = '';
+      }
+    }
+
+    layoutTimeline();
+    scaleTimeline();
+    window.addEventListener('resize', () => { layoutTimeline(); scaleTimeline(); });
+
+    // Timeline dot activation on scroll
+    const timelineObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const dots = e.target.querySelectorAll('.t-dot:not(.active)');
+          dots.forEach((dot, i) => {
+            setTimeout(() => dot.classList.add('active'), i * 150);
+          });
+          timelineObserver.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    const tlTrack = document.getElementById('timeline-track');
+    if (tlTrack) timelineObserver.observe(tlTrack);
+  </script>
+</body>
+</html>
